@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Heart, 
   MessageCircle, 
@@ -14,9 +14,10 @@ import {
   Mic, 
   Smile,
   Globe,
-  ThumbsUp
+  ThumbsUp,
+  X
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
 
@@ -124,22 +125,88 @@ const VipBadge = ({ plus }: { plus?: boolean }) => (
   </span>
 );
 
-const LanguageIndicator = ({ lang }: { lang: { code: string; color: string; dots: number; active?: boolean } }) => (
-  <div className="flex flex-col items-center">
-    <span className="text-[11px] font-medium text-gray-700">{lang.code}</span>
-    <div className="flex gap-0.5 mt-0.5 h-1 items-center">
-      {lang.active ? (
-        <div className={`w-6 h-1 rounded-full ${lang.color}`} />
-      ) : (
-        Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className={`w-1 h-1 rounded-full ${i < lang.dots ? lang.color : 'bg-gray-200'}`} />
-        ))
-      )}
-    </div>
-  </div>
-);
+const GiftAnimationOverlay = ({ onClose }: { onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000); // Auto close after 3 seconds
+    return () => clearTimeout(timer);
+  }, [onClose]);
 
-const CommentItem = ({ comment }: { comment: Comment }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-6 text-center"
+    >
+      <button 
+        onClick={onClose}
+        className="absolute top-10 right-6 p-2 bg-white/10 rounded-full text-white backdrop-blur-md"
+      >
+        <X size={24} />
+      </button>
+
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+      >
+        <h3 className="text-white text-xl font-medium mb-2">赠送礼物给</h3>
+        <p className="text-white text-2xl font-bold mb-12 truncate max-w-[300px]">
+          Beng
+        </p>
+      </motion.div>
+
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
+        animate={{ scale: 1.2, opacity: 1, rotate: 0 }}
+        transition={{ 
+          delay: 0.4, 
+          type: "spring", 
+          stiffness: 100,
+          duration: 0.8
+        }}
+        className="relative"
+      >
+        <div className="relative flex items-center justify-center">
+          <span className="text-[120px]">✋</span>
+          <span className="absolute -top-4 -right-4 text-4xl">💖</span>
+          <span className="text-[100px] ml-[-40px] mt-10">🐾</span>
+        </div>
+        
+        {/* Particle Effects */}
+        {[...Array(8)].map((_, i) => (
+          <motion.span
+            key={i}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ 
+              opacity: [0, 1, 0], 
+              scale: [0, 1.5, 0],
+              x: Math.cos(i * 45 * (Math.PI / 180)) * 150,
+              y: Math.sin(i * 45 * (Math.PI / 180)) * 150
+            }}
+            transition={{ delay: 0.8, duration: 1, repeat: Infinity, repeatDelay: 0.5 }}
+            className="absolute top-1/2 left-1/2 text-2xl"
+          >
+            {i % 2 === 0 ? '✨' : '💖'}
+          </motion.span>
+        ))}
+      </motion.div>
+
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="mt-16"
+      >
+        <p className="text-white/60 text-sm">送出礼物！</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const CommentItem = ({ comment, onGiftClick }: { comment: Comment, onGiftClick?: () => void }) => {
   if (comment.isGiftGiver) {
     return (
       <div className="flex items-start gap-3 py-4 border-b border-gray-50">
@@ -170,7 +237,10 @@ const CommentItem = ({ comment }: { comment: Comment }) => {
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
+        <button 
+          onClick={onGiftClick}
+          className="flex flex-col items-end gap-1 active:scale-95 transition-transform"
+        >
           <div className="flex items-center gap-1 mb-1">
             <div className="relative flex items-center">
               <span className="text-3xl">🍀</span>
@@ -180,7 +250,7 @@ const CommentItem = ({ comment }: { comment: Comment }) => {
             <span className="text-[9px] font-bold text-orange-400 px-1 border border-orange-400 rounded leading-none py-0.5">HT</span>
             <span className="text-sm font-medium text-gray-400">{comment.giftInfo?.count}</span>
           </div>
-        </div>
+        </button>
       </div>
     );
   }
@@ -236,8 +306,16 @@ const CommentItem = ({ comment }: { comment: Comment }) => {
 };
 
 export default function App() {
+  const [showGiftAnimation, setShowGiftAnimation] = useState(false);
+
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 max-w-md mx-auto shadow-xl flex flex-col">
+    <div className="min-h-screen bg-white font-sans text-gray-900 max-w-md mx-auto shadow-xl flex flex-col relative">
+      <AnimatePresence>
+        {showGiftAnimation && (
+          <GiftAnimationOverlay onClose={() => setShowGiftAnimation(false)} />
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-3 flex items-center justify-between">
         <button className="p-1 -ml-1">
@@ -324,7 +402,10 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <CommentItem comment={comment} />
+                <CommentItem 
+                  comment={comment} 
+                  onGiftClick={comment.isGiftGiver ? () => setShowGiftAnimation(true) : undefined} 
+                />
               </motion.div>
             ))}
           </div>
